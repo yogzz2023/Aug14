@@ -1,0 +1,70 @@
+Certainly, here's a simplified example of an encryption function that you can use in the provided code:
+
+```c
+#include <stdio.h>
+#include <pthread.h>
+#include <sched.h>
+
+#define NUM_THREADS 6
+
+void* encrypt_file(void* arg) {
+    char* filename = (char*)arg;
+    printf("Encrypting file: %s on core %d\n", filename, sched_getcpu());
+
+    FILE *inputFile, *outputFile;
+    int ch;
+
+    // Open input file for reading
+    inputFile = fopen(filename, "rb");
+    if (inputFile == NULL) {
+        perror("Error opening input file");
+        return NULL;
+    }
+
+    // Open output file for writing encrypted data
+    outputFile = fopen("encrypted.txt", "wb");
+    if (outputFile == NULL) {
+        perror("Error opening output file");
+        fclose(inputFile);
+        return NULL;
+    }
+
+    // Simple XOR-based encryption
+    while ((ch = fgetc(inputFile)) != EOF) {
+        ch = ch ^ 0xFF;  // XOR with 0xFF for simplicity
+        fputc(ch, outputFile);
+    }
+
+    // Close files
+    fclose(inputFile);
+    fclose(outputFile);
+
+    return NULL;
+}
+
+int main() {
+    pthread_t threads[NUM_THREADS];
+    char* filenames[NUM_THREADS] = {
+        "file1.txt", "file2.txt", "file3.txt",
+        "file4.txt", "file5.txt", "file6.txt"
+    };
+    
+    cpu_set_t cpuset;
+
+    for (int i = 0; i < NUM_THREADS; i++) {
+        pthread_create(&threads[i], NULL, encrypt_file, filenames[i]);
+        
+        CPU_ZERO(&cpuset);
+        CPU_SET(i, &cpuset);
+        pthread_setaffinity_np(threads[i], sizeof(cpu_set_t), &cpuset);
+    }
+
+    for (int i = 0; i < NUM_THREADS; i++) {
+        pthread_join(threads[i], NULL);
+    }
+
+    return 0;
+}
+```
+
+This example uses a simple XOR-based encryption technique, which is not suitable for real-world encryption due to its security vulnerabilities. In actual implementations, you should use well-established encryption libraries and algorithms such as AES. This example, however, should give you an idea of how to structure your file encryption process within the provided code.
