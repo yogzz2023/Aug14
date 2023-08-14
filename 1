@@ -1,0 +1,63 @@
+Certainly! Here's a simple example of how you could modify the `encrypt_file` function to perform a basic XOR encryption on a file:
+
+```c
+#include <stdio.h>
+#include <pthread.h>
+#include <sched.h>
+
+#define NUM_THREADS 6
+
+void* encrypt_file(void* arg) {
+    char* filename = (char*)arg;
+    printf("Encrypting file: %s on core %d\n", filename, sched_getcpu());
+
+    FILE* file = fopen(filename, "rb+");
+    if (file == NULL) {
+        perror("Error opening file");
+        return NULL;
+    }
+
+    int key = 0x55;  // XOR encryption key
+
+    // Encrypt the file using XOR
+    int byte;
+    while ((byte = fgetc(file)) != EOF) {
+        byte ^= key;
+        fseek(file, -1, SEEK_CUR);
+        fputc(byte, file);
+    }
+
+    fclose(file);
+    printf("File %s encrypted\n", filename);
+    return NULL;
+}
+
+int main() {
+    pthread_t threads[NUM_THREADS];
+    char* filenames[NUM_THREADS] = {
+        "file1.txt", "file2.txt", "file3.txt",
+        "file4.txt", "file5.txt", "file6.txt"
+    };
+
+    cpu_set_t cpuset;
+
+    for (int i = 0; i < NUM_THREADS; i++) {
+        pthread_create(&threads[i], NULL, encrypt_file, filenames[i]);
+        
+        CPU_ZERO(&cpuset);
+        CPU_SET(i, &cpuset);
+        pthread_setaffinity_np(threads[i], sizeof(cpu_set_t), &cpuset);
+    }
+
+    for (int i = 0; i < NUM_THREADS; i++) {
+        pthread_join(threads[i], NULL);
+    }
+
+    return 0;
+}
+```
+
+Please note that this is a very basic encryption method for illustrative purposes only. It's not secure for actual use. For real-world encryption, you would want to use well-established encryption algorithms from reputable libraries such as OpenSSL.
+
+
+
